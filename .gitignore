@@ -1,0 +1,27 @@
+# Camera frames and debug images (they can show people at the event)
+*.jpg
+*.jpeg
+frame_tape_*.png
+*_debug.png
+training/
+training_masks.png
+qrsweep/
+
+# Generated voice clips
+voice_cache/
+voice_cache_mock/
+*.wav
+
+# Run output (scanned QR evidence)
+evidence.json
+evidence_mock.json
+
+__pycache__/
+.venv/
+venv/
+
+# Keys and local output
+.env
+.env.*
+*.key
+bench.json
