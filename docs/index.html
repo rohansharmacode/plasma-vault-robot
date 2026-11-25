@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team PLASMA Robot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a project write-up for hackathon organisers and the ElevenLabs team
+   IDEA the robot's own wiring sheet: one signal route from text to speaker, stations on a line
+   PICTURE the ElevenLabs voice pipeline, five stations, two fallback branches, a token travelling the route
+   COLOUR steel band, graphite ink, the three vault core colours: blue route, green success, red failure
+   TYPE Barlow Semi Condensed for titles and station names, Inter for text
+   LAYOUT laptop: title left, GitHub block right, diagram full width beneath, step notes aligned under stations; phone: stacked, diagram vertical */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#121416);--ink:light-dark(#15181a,#eef0f1);--steel:light-dark(#d5d9dc,#1d2226);--panel:light-dark(#f2f4f5,#1a1e21);--muted:light-dark(#4b545a,#a9b2b7);--rule:light-dark(#c2c8cc,#343b40);--blue:light-dark(#2f63d0,#7aa2ff);--green:light-dark(#1d7f46,#53c98a);--red:light-dark(#c2311e,#ff7a66)}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:24px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Barlow Semi Condensed",Inter,sans-serif;line-height:1.05;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1{font-size:clamp(34px,5vw,52px);font-weight:700}
+h2{font-size:clamp(26px,3vw,34px);font-weight:700;margin-bottom:14px}
+h3{font-size:21px;font-weight:600;margin-bottom:6px}
+p{margin:0 0 12px;max-width:70ch}
+a{color:var(--blue)}
+code{font:14px/1.4 ui-monospace,Consolas,monospace;overflow-wrap:anywhere}
+.band{padding-block:clamp(28px,4vw,56px);padding-inline:max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+.top{background:var(--steel)}
+.head{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:24px 48px;align-items:end}
+.lead{font-size:18px;margin-top:14px;max-width:60ch}
+.gh{background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:18px}
+.btn{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:10px 18px;border-radius:8px;background:var(--ink);color:var(--bg);font-weight:600;text-decoration:none}
+.btn:hover,.btn:focus-visible{background:var(--blue);color:#fff;outline:none}
+.btn svg{width:20px;height:20px;fill:currentColor}
+.url{display:block;margin-top:10px;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;margin:14px 0 0;font-size:14px}
+.facts dt{color:var(--muted)}
+.facts dd{margin:0}
+.picture{margin-top:28px}
+.fig{position:relative;min-height:340px;background:var(--bg);border:1px solid var(--rule);border-radius:10px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+svg text{paint-order:stroke;stroke:var(--bg);stroke-width:4px}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:20px;margin-top:22px}
+.steps div{border-top:3px solid var(--blue);padding-top:10px;font-size:15px}
+.steps div:last-child{border-color:var(--green)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px 48px}
+.quote{list-style:none;padding:0;margin:0}
+.quote li{padding:8px 0;border-bottom:1px solid var(--rule)}
+.quote li span{display:block;color:var(--muted);font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:600;color:var(--muted)}
+td.ok{color:var(--green);font-weight:600;white-space:nowrap}
+.scroll{overflow-x:auto}
+.list{margin:0;padding-left:20px}
+.list li{margin-bottom:10px;max-width:72ch}
+.status{background:var(--panel);border-left:4px solid var(--green);padding:16px 18px;border-radius:6px;margin-top:8px;max-width:900px}
+.alt{background:var(--panel)}
+pre{position:relative;background:var(--steel);border-radius:8px;padding:16px;margin:0;overflow-x:auto}
+pre code{font-size:14px}
+.copy{position:absolute;top:8px;right:8px;min-height:36px;padding:6px 12px;border:1px solid var(--rule);border-radius:6px;background:var(--bg);color:var(--ink);font:600 14px Inter,sans-serif;cursor:pointer}
+.copy:focus-visible{outline:2px solid var(--blue)}
+.foot{border-top:1px solid var(--rule);color:var(--muted);font-size:14px}
+@media(max-width:900px){.steps{grid-template-columns:minmax(0,1fr);gap:12px}.head{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.two{grid-template-columns:minmax(0,1fr)}table{font-size:13px}th,td{padding:6px 4px}.fig{min-height:520px}}
+@media(prefers-reduced-motion:reduce){.token{display:none}}
+</style>
+</head>
+<body>
+
+<header class="band top">
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <h1>Team PLASMA: a talking robot that reboots the vault</h1>
+        <p class="lead">Code for our UBTECH UGOT Engineer robot at the Robomasters hackathon "Reboot the Vault". After one start command the robot runs the missions on its own and says what it is doing at every step. The voice is made with ElevenLabs.</p>
+      </div>
+      <div class="gh">
+        <a class="btn" href="https://github.com/rohansharmacode/plasma-vault-robot"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>View the code on GitHub</a>
+        <span class="url">github.com/rohansharmacode/plasma-vault-robot</span>
+        <dl class="facts">
+          <dt>Robot</dt><dd>UBTECH UGOT Engineer (mecanum wheels, 3-joint arm, clamp, camera, IR distance sensor)</dd>
+          <dt>Code</dt><dd>Python 3.12, MIT licence</dd>
+          <dt>Voice</dt><dd>ElevenLabs text-to-speech, <code>plasma_ai.py</code></dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="picture">
+      <h2>Every spoken line takes one ElevenLabs route, with two fallbacks so the robot is never silent</h2>
+      <div class="fig" id="fig" role="img" aria-label="Voice pipeline: robot line, ElevenLabs text-to-speech, WAV cache, upload to robot, robot speaker. If the upload fails the laptop speaker plays the clip. If ElevenLabs fails the robot's own voice speaks."><svg id="pipe"></svg></div>
+      <div class="steps">
+        <div><h3>Robot line</h3>All speech goes through one function, <code>Robot.say()</code>. It also prints the line on the robot's screen and in the dashboard log.</div>
+        <div><h3>ElevenLabs</h3>A POST to <code>/v1/text-to-speech/{voice_id}</code> with model <code>eleven_multilingual_v2</code>. The API key comes from <code>ELEVENLABS_API_KEY</code>, never from the code.</div>
+        <div><h3>WAV cache</h3>The reply is raw 22,050 Hz PCM, wrapped as a mono WAV. The file name is a hash of voice and text, so each line is paid for once.</div>
+        <div><h3>Upload</h3>The WAV goes to the robot over HTTP (port 7000). A test clip finds which of 10 known upload addresses works, and the address is remembered.</div>
+        <div><h3>Robot speaker</h3>The robot plays the uploaded file. The code waits for the clip length, so lines never cut each other off and the microphone does not hear the robot.</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="band">
+  <div class="wrap two">
+    <div>
+      <h2>65 lines are made before the run</h2>
+      <p>At start-up, <code>Voice.prepare()</code> makes and uploads every fixed line, so there is no network wait during a mission. After the first run they come from the cache.</p>
+      <ul class="quote">
+        <li>"Team Plasma." <span>Every run starts with the team name (team rule)</span></li>
+        <li>"Plasma online. Let's light it up." <span>One of three start-up catchphrases</span></li>
+        <li>"Tape locked. Let's ride." <span>Mission 2, tape following</span></li>
+        <li>"Decrypting evidence. Stand by." <span>Mission 4, QR evidence</span></li>
+        <li>"Core in transit. Nobody breathe." <span>Missions 5 and 6, carrying the core</span></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Some lines are made live</h2>
+      <p>Lines that depend on what the robot finds are generated during the run, with an 8-second limit so the voice never holds up a mission.</p>
+      <ul class="quote">
+        <li>"QR message 1 says: ..." <span>The decoded QR evidence, read aloud in full</span></li>
+        <li>"Battery at 82 percent. Pitch 1 degree ..." <span>Mission 3 status report after the robot turns to a clap (example values)</span></li>
+        <li>Gemma 4 reveal <span>Mission 6: Gemma 4 writes two sentences on how the evidence identified the core, ElevenLabs speaks them</span></li>
+        <li>Typed lines <span><code>--mission say</code>: type a line and the robot says it in the ElevenLabs voice</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="band alt">
+  <div class="wrap two">
+    <div>
+      <h2>Voice settings</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Voice</td><td>George (premade)</td><td>Warm narrator for a rescue robot. Not a clone of a real person. Swap with <code>ELEVENLABS_VOICE_ID</code></td></tr>
+          <tr><td>Model</td><td><code>eleven_multilingual_v2</code></td><td>Natural reading of mixed text such as QR clues</td></tr>
+          <tr><td>Stability</td><td>0.35</td><td>Lower gives a more dramatic delivery</td></tr>
+          <tr><td>Similarity boost</td><td>0.8</td><td>Keeps the voice consistent across 65+ lines</td></tr>
+          <tr><td>Style</td><td>0.6</td><td>More expression for catchphrases</td></tr>
+          <tr><td>Speaker boost</td><td>on</td><td>Clearer on the robot's small speaker</td></tr>
+          <tr><td>Output</td><td><code>pcm_22050</code></td><td>Wrapped as WAV on the laptop, plays on the robot and on any PC</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div>
+      <h2>Built so the voice cannot stop a mission</h2>
+      <ul class="list">
+        <li><strong>Two fallbacks.</strong> If the robot upload fails, the ElevenLabs clip plays on the laptop speaker. If ElevenLabs fails, the robot's built-in voice says the line.</li>
+        <li><strong>Circuit breaker.</strong> If ElevenLabs cannot be reached once, the run goes offline: cached lines still play, and new lines use the robot voice without waiting again.</li>
+        <li><strong>Never blocks driving.</strong> Lines said during tape following run in a background thread, so the control loop keeps steering.</li>
+        <li><strong>Practice mode.</strong> <code>--mock</code> writes silent clips to a separate cache, so test data never mixes with real voice files.</li>
+        <li><strong>Privacy.</strong> QR text is checked before it is spoken. A Wi-Fi password in a QR, plain or encoded, is masked and the robot says "a Wi-Fi network code".</li>
+        <li><strong>Check on the robot.</strong> <code>--mission voicetest</code> finds the upload address and plays every catchphrase.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="wrap">
+    <p class="status"><strong>At the event, the robot spoke with ElevenLabs.</strong> It said its commands and what it was doing in a natural human voice, not the built-in robot voice. The single tests in the table below were run with the robot's built-in voice (our test launchers pass <code>--no-eleven</code>). The ElevenLabs route above runs whenever <code>ELEVENLABS_API_KEY</code> is set.</p>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap two">
+    <div>
+      <h2>Tested on the robot</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Test</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Says the team name at the start of every run (Mission 1)</td><td class="ok">works</td></tr>
+          <tr><td>Follows black tape with the camera, ignores the light-brown decoy tape (Mission 2)</td><td class="ok">works through bends</td></tr>
+          <tr><td>Turns to a clap, says battery and tilt (Mission 3)</td><td class="ok">3 of 3</td></tr>
+          <tr><td>Turns until it finds a QR, reads it aloud, commits to a core colour (Mission 4)</td><td class="ok">simple QR</td></tr>
+          <tr><td>Grip: claw down, ball loaded by hand, camera-guided drop into the box</td><td class="ok">works</td></tr>
+          <tr><td>Live dashboard: camera, sensors, QR, evidence, log</td><td class="ok">on the laptop</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div>
+      <h2>Known limits</h2>
+      <ul class="list">
+        <li>The stop 15 to 25 cm before the blue wall does not work yet.</li>
+        <li>A very dense printed QR at about 70 cm is not read by the 640x480 camera.</li>
+        <li>Fully autonomous pickup (Missions 5 and 6) is not yet tested end to end.</li>
+        <li>Gemma 4 is not tested on the robot. The rule-based decoder gets 22 of 29 benchmark cases right.</li>
+      </ul>
+      <h2 style="margin-top:28px">Run it</h2>
+      <pre><button class="copy" type="button" id="copy">Copy</button><code id="cmds">pip install ugot pillow opencv-python numpy
+$env:ELEVENLABS_API_KEY="sk_..."
+python plasma_vault.py --mission voicetest
+python plasma_vault.py --mission m1</code></pre>
+    </div>
+  </div>
+</section>
+
+<footer class="band foot">
+  <div class="wrap">Team PLASMA, Robomasters hackathon "Reboot the Vault", October 2026. Code: <a href="https://github.com/rohansharmacode/plasma-vault-robot">github.com/rohansharmacode/plasma-vault-robot</a></div>
+</footer>
+
+<script>
+{
+  const st = [["Robot line", "text to say"], ["ElevenLabs", "text-to-speech"], ["WAV cache", "one file per line"],
+              ["Upload", "HTTP to robot"], ["Robot speaker", "plays the clip"]];
+  const fb = [{from: 1, t: "Robot's own voice", why: "if ElevenLabs fails"}, {from: 3, t: "Laptop speaker", why: "if upload fails"}];
+  const s = document.getElementById("pipe");
+  const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const draw = () => {
+    const W = s.clientWidth, H = s.clientHeight;
+    let o = "";
+    if (W >= 620) {
+      const m = 80, y = Math.round(H * 0.36), gap = (W - 2 * m) / (st.length - 1);
+      const x = i => Math.round(m + i * gap), by = Math.round(H * 0.8);
+      o += `<line x1="${x(0)}" y1="${y}" x2="${x(4)}" y2="${y}" stroke="var(--blue)" stroke-width="8" stroke-linecap="round"/>`;
+      fb.forEach(f => {
+        o += `<path d="M${x(f.from)} ${y + 64} V${by - 22}" stroke="var(--red)" stroke-width="3" stroke-dasharray="7 6" fill="none"/>`;
+        o += `<text x="${x(f.from) + 10}" y="${Math.round((y + 70 + by - 22) / 2) + 6}" font-size="13" fill="var(--red)">${f.why}</text>`;
+        o += `<rect x="${x(f.from) - 76}" y="${by - 22}" width="152" height="44" rx="8" fill="var(--panel)" stroke="var(--rule)"/>`;
+        o += `<text x="${x(f.from)}" y="${by + 5}" font-size="14" font-weight="600" text-anchor="middle" fill="var(--ink)" style="stroke:none">${f.t}</text>`;
+      });
+      st.forEach((d, i) => {
+        const c = i === 4 ? "var(--green)" : "var(--blue)";
+        o += `<circle cx="${x(i)}" cy="${y}" r="24" fill="var(--bg)" stroke="${c}" stroke-width="6"/>`;
+        o += `<circle cx="${x(i)}" cy="${y}" r="8" fill="${c}"/>`;
+        o += `<text x="${x(i)}" y="${y - 40}" font-size="17" font-weight="700" text-anchor="middle" fill="var(--ink)" font-family="Barlow Semi Condensed, sans-serif">${d[0]}</text>`;
+        o += `<text x="${x(i)}" y="${y + 50}" font-size="13" text-anchor="middle" fill="var(--muted)">${d[1]}</text>`;
+      });
+      if (motion) o += `<circle class="token" r="7" fill="var(--ink)"><animateMotion dur="5s" repeatCount="indefinite" path="M${x(0)} ${y} H${x(4)}"/></circle>`;
+    } else {
+      const lx = 44, t = 46, gap = (H - t - 60) / (st.length - 1), y = i => Math.round(t + i * gap);
+      o += `<line x1="${lx}" y1="${y(0)}" x2="${lx}" y2="${y(4)}" stroke="var(--blue)" stroke-width="8" stroke-linecap="round"/>`;
+      st.forEach((d, i) => {
+        const c = i === 4 ? "var(--green)" : "var(--blue)";
+        o += `<circle cx="${lx}" cy="${y(i)}" r="18" fill="var(--bg)" stroke="${c}" stroke-width="5"/><circle cx="${lx}" cy="${y(i)}" r="6" fill="${c}"/>`;
+        o += `<text x="${lx + 32}" y="${y(i) - 2}" font-size="17" font-weight="700" fill="var(--ink)" font-family="Barlow Semi Condensed, sans-serif">${d[0]}</text>`;
+        o += `<text x="${lx + 32}" y="${y(i) + 17}" font-size="13" fill="var(--muted)">${d[1]}</text>`;
+        const f = fb.find(q => q.from === i);
+        if (f) o += `<text x="${lx + 32}" y="${y(i) + 36}" font-size="13" fill="var(--red)">${f.why}: ${f.t.toLowerCase()}</text>`;
+      });
+      if (motion) o += `<circle class="token" r="6" fill="var(--ink)"><animateMotion dur="5s" repeatCount="indefinite" path="M${lx} ${y(0)} V${y(4)}"/></circle>`;
+    }
+    s.innerHTML = o;
+  };
+  const ro = new ResizeObserver(draw);
+  ro.observe(s);
+  document.getElementById("copy").addEventListener("click", e => {
+    const b = e.currentTarget;
+    navigator.clipboard.writeText(document.getElementById("cmds").textContent)
+      .then(() => { b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1500); })
+      .catch(() => { b.textContent = "Select and copy"; });
+  });
+}
+</script>
+</body>
+</html>

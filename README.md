@@ -2,6 +2,8 @@
 
 Code for our UBTECH UGOT Engineer robot (mecanum chassis, 3-joint arm, clamp, front camera, IR distance sensor) at the Robomasters Hackathon. After one start command the robot does the vault missions on its own and says what it is doing at every step. Every run starts with "Team Plasma" and a catchphrase.
 
+Project page (how the robot uses ElevenLabs, with a diagram): https://rohansharmacode.github.io/plasma-vault-robot/
+
 At the event the robot spoke with **ElevenLabs**: it said its commands and what it was doing in a natural human voice, not the built-in robot voice. The ElevenLabs voice runs when `ELEVENLABS_API_KEY` is set. Without a key the robot uses its built-in voice. **Gemma 4** (open weights, run locally with Ollama) can read the QR evidence. Without it a rule-based decoder chooses the core.
 
 ## Tested on the robot
@@ -90,6 +92,7 @@ After `teach`, `white_view.py` records the ball view again with the white-ball d
 * `white_view.py`, `qr_sweep.py`: diagnostic scripts (see Tools)
 * `arm_teach.json`: taught arm poses and ball view
 * `run_*.bat`: launchers for our team laptop
+* `docs/index.html`: the project page, served by GitHub Pages
 * `QR_collect_green_core.png`, `test_qr.png` (shown full screen by `test_qr.html`), `qr_green.svg`: test QR codes we made for practice
 
 License: MIT
