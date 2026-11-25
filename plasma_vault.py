@@ -27,6 +27,7 @@ import argparse
 import base64
 import binascii
 import codecs
+import functools
 import json
 import math
 import os
@@ -456,13 +457,16 @@ class Robot:
     def qrcodes(self):
         """QR codes in view. Decoder 1: UGOT QR model. Decoder 2 (failsafe): OpenCV on the raw camera frame."""
         try:
-            STATE["qr"] = [{"text": q[0], "cx": q[1], "cy": q[2], "area": q[5], "src": "ugot"}
-                           for q in self.got.get_qrcode_total_info() if q[0]]
+            qs = [{"text": q[0], "cx": q[1], "cy": q[2], "area": q[5], "src": "ugot"}
+                  for q in self.got.get_qrcode_total_info() if q[0]]
         except Exception:
-            STATE["qr"] = []
-        if not STATE["qr"] and not MOCK:
-            STATE["qr"] = self._qr_opencv()
-        return STATE["qr"]
+            qs = []
+        if not qs and not MOCK:
+            qs = self._qr_opencv()
+        for q in qs:            # mask secrets before STATE: the dashboard thread can read STATE at any time
+            q["text"] = mask_secret(q["text"])
+        STATE["qr"] = qs
+        return qs
 
     def qr_spots(self):
         """QR codes that are VISIBLE but too small/far to decode (OpenCV locate-only) -> drive closer to them."""
@@ -709,13 +713,13 @@ MORSE = {".-": "A", "-...": "B", "-.-.": "C", "-..": "D", ".": "E", "..-.": "F",
          "..": "I", ".---": "J", "-.-": "K", ".-..": "L", "--": "M", "-.": "N", "---": "O", ".--.": "P",
          "--.-": "Q", ".-.": "R", "...": "S", "-": "T", "..-": "U", "...-": "V", ".--": "W", "-..-": "X",
          "-.--": "Y", "--..": "Z", "-----": "0", ".----": "1", "..---": "2", "...--": "3", "....-": "4",
-         ".....": "5", "-....": "6", "--...": "7", "---..": "8", "----.": "9"}
+         ".....": "5", "-....": "6", "--...": "7", "---..": "8", "----.": "9", "---...": ":", "-...-": "="}
 COMMON = ("THE", "CORE", "RED", "BLUE", "GREEN", "IS", "NOT", "SAFE", "ENERGY", "CORRECT", "TRUE", "FALSE",
           "VAULT", "SIGNATURE", "RESTART", "AND", "ONLY", "CONTAINS", "WRONG", "DANGER", "STABLE", "UNSTABLE")
 
 
 def _printable(s):
-    return s and sum(c.isprintable() for c in s) / len(s) > 0.95
+    return s and sum(c.isprintable() or c in "\n\r\t" for c in s) / len(s) > 0.95
 
 
 def decode_candidates(text):
@@ -869,6 +873,7 @@ def save_evidence(ev):
 
 
 def add_fragment(text, source):
+    text = mask_secret(text)                        # also covers --evidence and web-page text
     ev = load_evidence()
     if not any(fr["raw"] == text for fr in ev["fragments"]):
         fr = analyse_fragment(text)
@@ -902,11 +907,66 @@ def chosen_core(args):
     return ev["random_core"], "no colour clue in the evidence - chose %s at random" % ev["random_core"]
 
 
-def redact(text):
-    """Never speak / print / store secrets that happen to be in a QR (e.g. Wi-Fi login codes)."""
-    t = str(text)
-    t = re.sub(r"(?i)(P:)([^;]*)", r"\1****", t)                       # WIFI:...;P:<password>;
-    t = re.sub(r"(?i)(pass(word)?\s*[:=]\s*)(\S+)", r"\1****", t)
+# A real Wi-Fi QR: "WIFI:" directly followed by a field, e.g. WIFI:T:WPA;S:<name>;P:<password>;;
+WIFI_BLOCK = re.compile(r"(?i)WIFI:(?=(?:PH2|[STPHEAIRK]):)")
+# The P: value ends at the next ";<field>:" or ";;" or the end, so "\;" or a wrongly unescaped ";" is masked too.
+WIFI_PASS = re.compile(r"(?i)(?<=[:;])(\s*P:)(?:\\[\s\S]?|[^;\\]|;(?!\s*(?:PH2|[STHEAIRK]):|;))*")
+WIFI_WORDS = re.compile(r"(?i)wi-?fi|wlan|ssid|\bwpa")
+URL_LOGIN = re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://[^/\s:@]+:)[^@\s/]+(?=@)")      # https://user:<password>@host
+
+
+def redact(text, strict=False):
+    """Never speak / print / store secrets that happen to be in a QR (e.g. Wi-Fi login codes).
+    strict=True is for Caesar / Atbash / reversed decodes: only long, unambiguous signs of a secret count there,
+    because some letter shift of almost any clue contains a short word like "pwd:"."""
+    t = t0 = str(text)
+    if WIFI_BLOCK.search(t):
+        t = WIFI_PASS.sub(r"\1****", t)
+    wifi_text = WIFI_WORDS.search(t)
+    labels, sep = "password|passwd|passphrase", r"[\"']?\s*[:=]"
+    if wifi_text:                                   # Wi-Fi text: also "the Wi-Fi password is x"
+        sep = r"[\"']?(?:\s*[:=\-]|\s+is\b)"
+    if not strict:
+        labels += r"|pwd|psk|security\s+key"
+        if wifi_text:                               # and "Key: x", "PW: x"
+            labels += "|passcode|key|pw|pin"
+    # mask one value: a quoted string or one word (a clue later in the line stays readable); skip values already masked
+    t = re.sub(r"(?i)(?<![A-Za-z])((?:%s)%s\s*)(?!\*{4})(\"[^\"\n]*\"|'[^'\n]*'|[^\s;&]+)" % (labels, sep), r"\1****", t)
+    t = URL_LOGIN.sub(r"\1****", t)
+    if t == t0 and "%" in t:                        # nothing found: maybe a URL-encoded secret
+        u = urllib.parse.unquote(t)
+        if u != t and redact(u, strict) != u:
+            return redact(u, strict)
+    return t
+
+
+# decodes that can hide one more layer (Caesar, Atbash and the base64-of-each layer are already in decode_candidates)
+LAYER_DECODES = ("base64", "base64url", "base32", "hex", "binary", "ascii_codes", "url", "reversed")
+SHIFT_DECODES = {"reversed", "atbash"} | {"caesar-%d" % k for k in range(1, 26)}
+
+
+def mask_secret(text, depth=2):
+    """redact(), and also look under the decodes we know, up to two layers deep: a Wi-Fi QR that is
+    base64 / hex / Caesar / ... encoded is replaced by its masked plaintext, so the encoded password is not kept."""
+    return _mask_secret(str(text), depth, False)
+
+
+@functools.lru_cache(maxsize=512)               # the same QR is seen in many frames: decode it once
+def _mask_secret(t, depth, strict):
+    t = redact(t, strict)                       # then keep looking: a second secret may be encoded in the rest
+    cands = decode_candidates(t)
+    for k, v in cands.items():
+        if k != "raw" and v != t:
+            r = redact(v, strict or k in SHIFT_DECODES)
+            if r != v:
+                return r
+    if depth > 1:
+        for k in LAYER_DECODES:
+            v = cands.get(k)
+            if v and v != t:
+                m = _mask_secret(v, depth - 1, strict or k in SHIFT_DECODES)
+                if m != v:
+                    return m
     return t
 
 
@@ -1490,19 +1550,20 @@ def m4_decode(bot, args):
             break
         new += 1
         done_texts.add(text)
-        text = redact(text)                                  # secrets never reach logs, speech or evidence.json
+        text = mask_secret(text)                             # secrets never reach logs, speech or evidence.json
         log("QR %d RAW: %r  (read by %s decoder)" % (new, text, (STATE.get("qr") or [{}])[0].get("src", "?")))
         bot.quip("decrypt")
         ev = add_fragment(text, "QR marker %d" % new)
-        fr = [f for f in ev["fragments"] if f["raw"] == text][0]
+        fr = next((f for f in ev["fragments"] if f["raw"] == mask_secret(text)), ev["fragments"][-1])
         log("decoded (%s): %s" % (fr["method"], fr["decoded"]))
         for n, v in fr["top"]:
             log("   candidate %-14s %s" % (n, v))
-        spoken = fr["decoded"] if not text.upper().startswith("WIFI:") else "a Wi-Fi network code, no colour clue"
+        spoken = "a Wi-Fi network code, no colour clue" if WIFI_BLOCK.search(text) else fr["decoded"]
         bot.say("QR message %d says: %s" % (new, spoken[:200]))       # read the instruction out in full
         if re.match(r"https?://", text.strip(), re.I):
             page = fetch_url_text(text.strip())
             if page:
+                page = mask_secret(page)
                 log("QR is a link -> page text added as evidence: %r" % page[:200])
                 ev = add_fragment(page, "web page from QR %d" % new)
         c, votes, reasons = color_from_evidence(ev["fragments"])
@@ -1533,6 +1594,8 @@ def run_gemma(bot, ev):
     bot.quip("gemma")
     g = bot.gemma.analyse_evidence(ev["fragments"])
     if g:
+        g["decoded"] = [redact(x) for x in g["decoded"]]     # in case Gemma decodes a secret the rules missed
+        g["reasoning"] = redact(g["reasoning"])
         log("GEMMA 4: core=%s conf=%.2f decoded=%s" % (g["core"], g["confidence"], g["decoded"]))
         log("GEMMA 4 reasoning: %s" % g["reasoning"])
         ev = load_evidence()
@@ -1664,7 +1727,7 @@ def m6_restart(bot, args):
     line = None
     if bot.gemma and bot.gemma.ok:
         line = bot.gemma.reveal_line(color, ev["fragments"], ev.get("gemma", {}).get("reasoning", why))
-    bot.say(line or ("The evidence identified the %s core: %s" % (color, why[:150])))
+    bot.say(redact(line or ("The evidence identified the %s core: %s" % (color, why[:150]))))
     bot.quip("done", wait=True)
     return True
 

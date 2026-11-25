@@ -66,7 +66,9 @@ After `teach`, `white_view.py` records the ball view again with the white-ball d
 ## Evidence and the core decision
 
 * Each QR fragment goes into `evidence.json` with automatic decodes: base64/32, hex, binary, ASCII codes, A1Z26, Morse, Caesar 1-25, Atbash, reversed, URL, plus a base64 decode of each of those results.
-* A plain Wi-Fi QR is spoken as "a Wi-Fi network code" and its password is masked in the evidence file.
+* A Wi-Fi QR is spoken as "a Wi-Fi network code". Its password is masked as soon as the QR is read. The password does not reach the log, the dashboard text, the speech, Gemma or the evidence file.
+  * Also masked: a Wi-Fi QR under up to two layers of the decodes above (for example base64 of hex), `password: x`, `pwd=x`, `"password":"x"`, a URL login (`user:x@host`), and in Wi-Fi text `Key: x` or "the password is x".
+  * Not masked: a code the decoder does not know, a Caesar shift over hex or base32, Wi-Fi fields without the `WIFI:` prefix, the bare label `pass`, the words after the first word of an unquoted password, and the camera picture (the dashboard camera view and saved frames show the QR itself).
 * Choice order: `--core` (the team's decision) > config > Gemma 4 (60% confidence or more, or any confidence when the rules find nothing) > rule-based votes > Gemma 4 with low confidence > a random colour, kept for the rest of that evidence file.
 * Add a clue by hand: `python plasma_vault.py --evidence "TEXT" --mission m4`.
 

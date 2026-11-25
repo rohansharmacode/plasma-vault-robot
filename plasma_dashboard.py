@@ -150,7 +150,8 @@ def start(state, got, evidence_file, chosen_core_fn, camera=False, port=8765, la
                     core, why = chosen_core_fn()
                 except Exception:
                     core, why = None, ""
-                body = dict(state)
+                body = {k: v for k, v in dict(state).items()       # copy first: other threads add keys
+                        if not isinstance(v, (bytes, bytearray))}      # camera frames go via /frame.jpg
                 body["t"] = time.strftime("%H:%M:%S")
                 body["evidence"] = {"fragments": [{k: fr.get(k) for k in ("raw", "decoded", "method")}
                                                   for fr in ev.get("fragments", [])],

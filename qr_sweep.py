@@ -6,6 +6,7 @@ os.chdir(WS)
 import cv2
 import numpy as np
 from ugot import ugot
+from plasma_vault import mask_secret     # never print a Wi-Fi password from a QR
 
 os.makedirs("qrsweep", exist_ok=True)
 g = ugot.UGOT()
@@ -38,7 +39,7 @@ for i in range(18):
                 except Exception as e:
                     ok, texts, pts = False, (), None
                 if ok:
-                    res.append((name, sc, [t[:40] for t in texts]))
+                    res.append((name, sc, [mask_secret(t)[:40] for t in texts]))
                 try:
                     okl, ptsl = d.detectMulti(im)
                     if okl and ptsl is not None:
@@ -46,7 +47,7 @@ for i in range(18):
                 except Exception:
                     pass
     try:
-        u = g.get_qrcode_total_info()
+        u = [[mask_secret(q[0])] + list(q[1:]) for q in g.get_qrcode_total_info()]
     except Exception as e:
         u = "err %s" % e
     print("step %02d (%3d deg) ugot=%s  %s" % (i, i * 20, u, res), flush=True)
