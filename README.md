@@ -2,7 +2,7 @@
 
 Code for our UBTECH UGOT Engineer robot (mecanum chassis, 3-joint arm, clamp, front camera, IR distance sensor) at the Robomasters Hackathon. After one start command the robot does the vault missions on its own and says what it is doing at every step. Every run starts with "Team Plasma" and a catchphrase.
 
-The voice can be an **ElevenLabs** voice (set `ELEVENLABS_API_KEY`). Without a key the robot uses its built-in voice. **Gemma 4** (open weights, run locally with Ollama) can read the QR evidence. Without it a rule-based decoder chooses the core.
+At the event the robot spoke with **ElevenLabs**: it said its commands and what it was doing in a natural human voice, not the built-in robot voice. The ElevenLabs voice runs when `ELEVENLABS_API_KEY` is set. Without a key the robot uses its built-in voice. **Gemma 4** (open weights, run locally with Ollama) can read the QR evidence. Without it a rule-based decoder chooses the core.
 
 ## Tested on the robot
 
